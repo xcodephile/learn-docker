@@ -1,0 +1,57 @@
+version: '3.8'
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+    - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+    - '--config.file=/etc/prometheus/prometheus.yml'
+    - '--web.enable-lifecycle'
+    depends_on:
+    - cadvisor
+    ports:
+    - 9090:9090
+    networks:
+    - jenkins_network
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+    - 8080:8080
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:ro
+    - /sys:/sys:ro
+    #- /var/lib/docker/:/var/lib/docker:ro
+    - /mnt/my-docker/:/rootfs/var/lib/docker:ro
+    command:
+      - privileged=true
+    networks:
+    - jenkins_network
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+    - 9100:9100
+    networks:
+    - jenkins_network
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    user: "1000"
+    environment:
+    - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+    - prometheus
+    ports:
+    - 3000:3000
+    networks:
+    - jenkins_network
+networks:
+  jenkins_network:
+    external: true
+## IMPORTANT:
+## This project must links to ../jenkins project. Thus, still using the same network: 'jenkins_network'.
+## How to do that? Define name of jenkins network in every container (services.<container_name>.networks)
+## and set networks.<network_name>.external to true.
